@@ -2,6 +2,6 @@
 
 #Use React Native expo
 
--only use Local IPv4 call Api
+-only use Local IPv4 Address call Api
 #
 -User Page No Finish all Requirement
