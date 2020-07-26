@@ -10,17 +10,34 @@ import {
   StyleSheet,
   Text,
     StatusBar,
-    SafeAreaView, FlatList,TouchableOpacity,
+    SafeAreaView, FlatList,TouchableOpacity,Alert,ScrollView,
 } from 'react-native';
 import { useState } from 'react';
 import * as Permissions from 'expo-permissions';
 import CalendarStrip from 'react-native-calendar-strip';
 import Moment from 'moment';
 
-let mEmail = 'nono123011@yahoo.com.hk';
-let mPassword = '123456';
+let mEmail = '';
+let mPassword = '';
+let mClinicName = '';
+let mPhoneNumber = '';
+let mAddress ='';
 var errorMsg ='';
+
+let userJson ={
+    "email": mEmail,
+    "password": mPassword,
+    "clinic_name": mClinicName,
+    "phone_number": mPhoneNumber,
+    "address": mAddress
+};
+let bookingResponse = {
+    "isPass":true,
+    "booking":[],
+};
+
 const Stack = createStackNavigator();
+
 
 export default App;
 
@@ -37,19 +54,19 @@ function App() {
 }
 
 const url = 'http://192.168.1.9:3000/users/login';
+const regUrl = 'http://192.168.1.9:3000/users/register';
+
 function HomeScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
 
       <TextInput
-
         style={styles.input}
         placeholder='email'
         autoCapitalize="none"
         placeholderTextColor='white'
         onChangeText={val => onChangeText('email', val)}
-        defaultValue='nono123011@yahoo.com.hk'
         />
       <TextInput
         style={styles.input}
@@ -58,7 +75,6 @@ function HomeScreen({ navigation }) {
         autoCapitalize="none"
         placeholderTextColor='white'
         onChangeText={val => onChangeText('password', val)}
-        defaultValue='123456'
         />
       <View style={styles.touchable}>
       <Button
@@ -82,7 +98,15 @@ function HomeScreen({ navigation }) {
                 try {
                     console.log(responseJson.isPass)
                     if(responseJson.isPass == true){
-                        userJson = responseJson;
+                        bookingResponse = responseJson;
+                        // bookingResponse.booking.map((item,key) =>{
+                        //     if(key ===1){
+                        //         showList.push(item)
+                        //     }
+                        //     console.log(item);
+                        //     console.log(key);
+                        // })
+
                         navigation.navigate('Details');
                     }
                 } catch (err) {
@@ -108,9 +132,11 @@ function HomeScreen({ navigation }) {
 }
 
 function RegistrationScreen({ navigation }) {
+
   return (
-    // email: '', password: '', clinic_name: '', phone_number: '',address: ''
+
     <View style={styles.container}>
+
       <TextInput
         style={styles.input}
         placeholder='email'
@@ -134,6 +160,7 @@ function RegistrationScreen({ navigation }) {
         placeholder='phone_number'
         autoCapitalize="none"
         placeholderTextColor='white'
+        keyboardType="numeric"
         onChangeText={val => onChangeText('phone_number', val)}/>
       <TextInput
         style={styles.input}
@@ -141,10 +168,52 @@ function RegistrationScreen({ navigation }) {
         autoCapitalize="none"
         placeholderTextColor='white'
         onChangeText={val => onChangeText('address', val)}/>
+
         <Button
           title='LogIn'
           onPress={() => {
-              navigation.goBack()
+
+                fetch(regUrl, {
+                    method: 'POST',
+                    headers: {
+                        Accept: 'application/json',
+                        'Accept':       'application/json',
+                        'Content-Type': 'application/json',
+                    },
+                    body:JSON.stringify({
+                        email: mEmail,
+                        password: mPassword,
+                        clinic_name: mClinicName,
+                        phone_number: mPhoneNumber,
+                        address: mAddress
+                    }),
+                })
+                .then((response) => response.json())
+                .then((responseJson) => {
+                    try {
+                        console.log(responseJson.isPass)
+                        if(responseJson.isPass == true){
+                            navigation.goBack();
+                        }else {
+                            errorMsg = responseJson.msg;
+                            console.log(errorMsg);
+                            Alert.alert(
+                                errorMsg,
+                                '',
+                                [
+                                    {text: 'OK', onPress: () => console.log('OK Pressed')},
+                                ],
+                                { cancelable: false }
+                            )
+                        }
+                    } catch (err) {
+                        console.log('error signing up: ', err)
+                    }
+                })
+                .catch((error) => {
+                    console.error(error);
+                });
+
             }
           }
         />
@@ -152,17 +221,21 @@ function RegistrationScreen({ navigation }) {
   );
 }
 
-let userJson ={};
-
-
 const Item = ({ item, onPress, style }) => (
     <TouchableOpacity onPress={onPress} style={[styles.item, style]}>
-<Text style={styles.title}>{item.date}</Text>
+        <Text style={styles.title}>"Clinic:"{item.clinic}</Text>
+        <Text style={styles.title}>"DoctorName:"{item.doctor_name}</Text>
+        <Text style={styles.title}>"PatientName:"{item.patient_name}</Text>
+        <Text style={styles.title}>"Diagnosis:"{item.diagnosis}</Text>
+        <Text style={styles.title}>"Medication:"{item.medication}</Text>
+        <Text style={styles.title}>"ConsultationFee:"{item.consultation_fee}</Text>
     </TouchableOpacity>
 );
 
-function DetailsScreen({ navigation }) {
 
+
+function DetailsScreen({ navigation }) {
+    let showList=[]
     const renderItem = ({ item }) => {
         return (
             <Item
@@ -170,19 +243,36 @@ function DetailsScreen({ navigation }) {
             style={{ backgroundColor:'#fff' }}/>
     );
     };
+    const [userdetail, setUserDetail] = useState(null);
 
     return (
     <View styles={styles.container}>
         <CalendarStrip
             scrollable
             style={{height:100, paddingTop: 20, paddingBottom: 10}}
+            startingDate={new Date()}
             calendarColor={'#3343CE'}
             calendarHeaderStyle={{color: 'white'}}
             dateNumberStyle={{color: 'white'}}
             dateNameStyle={{color: 'white'}}
             iconContainer={{flex: 0.1}}
             onDateSelected ={ (date) =>{
-                console.log(date)
+
+                // var date = new Date().getDate(); //To get the Current Date
+                // var month = new Date().getMonth() + 1; //To get the Current Month
+                // var year = new Date().getFullYear(); //To get the Current Year
+                // const nowDate = year+"-"+month+"-"+date
+                // console.log(nowDate);
+                bookingResponse.booking.map((item,key) =>{
+                    if(key ===1){
+                        console.log( typeof(item.date));
+                        console.log(item.date);
+                        setUserDetail(item);
+                    }
+                })
+
+                console.log(showList);
+
             }}
             />
         <View style = {{flexDirection: 'row'}}>
@@ -203,33 +293,46 @@ function DetailsScreen({ navigation }) {
         <View style={[{ width: "50%", backgroundColor: "red" }]}>
         <Button
         onPress={()=>{
-            console.log(userJson)
+            console.log(bookingResponse)
         }}
         title="monthly"
         color="#90A4AE"
         />
         </View>
         </View>
-            <SafeAreaView styles={styles.container} >
+
+            <SafeAreaView>
+            <ScrollView styles={styles.scrollView}>
                 <FlatList
-            data={userJson.booking}
-            renderItem={renderItem}
-            keyExtractor={(item) => item.id}
-            />
+                    data={bookingResponse.booking}
+                    renderItem={renderItem}
+                    keyExtractor={(item) => item.clinic}
+                    extraData={userdetail}
+                />
+                </ScrollView>
             </SafeAreaView>
+
     </View>
 
   );
 }
 
-
 function onChangeText(key, val){
-  if (key == 'email') {
-    mEmail = val
-  }
-  if (key == 'password') {
-    mPassword = val
-  }
+    if (key == 'email') {
+        mEmail = val
+    }
+    else if (key == 'password') {
+        mPassword = val
+    }
+    else if (key == 'clinic_name') {
+        mClinicName = val
+    }
+    else if (key == 'phone_number') {
+        mPhoneNumber = val
+    }
+    else if (key == 'address') {
+        mAddress = val
+    }
 }
 
 const styles = StyleSheet.create({
@@ -241,6 +344,10 @@ const styles = StyleSheet.create({
     flexDirection: 'column',
     flexGrow: 1
   },
+    scrollView: {
+        backgroundColor: 'pink',
+        marginHorizontal: 20,
+    },
   input:{
     backgroundColor:'#fa8072',
     width:'80%',
